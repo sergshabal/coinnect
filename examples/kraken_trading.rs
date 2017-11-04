@@ -8,14 +8,17 @@ extern crate coinnect;
 
 use std::path::PathBuf;
 
-use coinnect::kraken::api::KrakenApi;
+use coinnect::kraken::{KrakenApi, KrakenCreds};
 use std::error::Error;
 
 fn main() {
     // We create a KrakenApi by loading a json file containing API configuration
     // (see documentation for more info)
     let path = PathBuf::from("keys_real.json");
-    let mut my_api = KrakenApi::new_from_file("account_kraken", path);
+    let my_creds = KrakenCreds::new_from_file("account_kraken", path).unwrap();
+    let mut my_api = KrakenApi::new(my_creds).unwrap();
+
+
 
     // First, get the list of all pair we can trade with EUR€ as quote
     // You could use a simple unwrap() or use match to recover from an error for example
@@ -29,7 +32,13 @@ fn main() {
 
     for pair in list_all_pairs {
         // The map structure is explained in documentation
-        let quote = pair.1.as_object().unwrap().get("quote").unwrap().as_str().unwrap();
+        let quote = pair.1
+            .as_object()
+            .unwrap()
+            .get("quote")
+            .unwrap()
+            .as_str()
+            .unwrap();
         if quote == "ZEUR" {
             let name = pair.0;
             list_pairs_eur.push(name);
@@ -46,7 +55,11 @@ fn main() {
 
     // Convert Vec into comma separated values String
     let eur_pairs = format!("{:?}", list_pairs_eur);
-    let eur_pairs = eur_pairs.replace("\"", "").replace("[", "").replace("]", "").replace(" ", "");
+    let eur_pairs = eur_pairs
+        .replace("\"", "")
+        .replace("[", "")
+        .replace("]", "")
+        .replace(" ", "");
 
 
     // Get ticker
@@ -62,9 +75,19 @@ fn main() {
 
         // WARNING: Kraken uses quotes to encapsulate floating value
         let pair_info = pair.1.as_object().unwrap();
-        let open_price = pair_info.get("o").unwrap().as_str().unwrap().parse::<f64>().unwrap();
+        let open_price = pair_info
+            .get("o")
+            .unwrap()
+            .as_str()
+            .unwrap()
+            .parse::<f64>()
+            .unwrap();
         let close_price_array = pair_info.get("c").unwrap().as_array().unwrap();
-        let close_price = close_price_array[0].as_str().unwrap().parse::<f64>().unwrap();
+        let close_price = close_price_array[0]
+            .as_str()
+            .unwrap()
+            .parse::<f64>()
+            .unwrap();
 
         let price_var = (close_price / open_price - 1.0) * 100.0;
 
